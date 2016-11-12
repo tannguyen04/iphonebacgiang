@@ -1,0 +1,24 @@
+<?php
+/**
+ * @file
+ * Code for the IPBG Views feature.
+ */
+
+include_once 'ipbg_views.features.inc';
+
+/*
+ * Implements hook_views_pre_render()
+ */
+function ipbg_views_views_pre_render(&$view) {
+  if ($view->name == 'node_product_search_api' && $view->current_display == 'panel_pane_1') {
+    if (empty($view->style_plugin->row_plugin->rendered_content)
+    || ($view->query->pager->current_page)) {
+      return;
+    }
+    reset($view->style_plugin->row_plugin->rendered_content);
+    $first_key = key($view->style_plugin->row_plugin->rendered_content);
+    $first_row = $view->style_plugin->row_plugin->rendered_content[$first_key];
+    $view->style_plugin->row_plugin->rendered_content[$first_key] = node_view($first_row['#node'], 'featured');
+  }
+
+}

@@ -1,0 +1,148 @@
+<?php
+/**
+ * @file
+ * Code for the IPGB Pages feature.
+ */
+define('IPBG_MEGAMENU_VI', 'main-menu');
+define('IPBG_MEGAMENU_EN', 'menu-main-menu-en');
+include_once 'ipgb_pages.features.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function ipgb_pages_menu() {
+  $items = array();
+  $items['admin/config/ipbg'] = array(
+    'title' => 'IPBG',
+    'description' => 'Settings for custom workflow in IPBG.',
+    'position' => 'left',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+  $items['admin/config/ipbg/mega-menu'] = array(
+    'title' => 'IPBG mega menu',
+    'description' => 'Setting IPBG mega menu',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('form_admin_config_ipbg_menu'),
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+function form_admin_config_ipbg_menu() {
+  $nodes_navigation = node_load_multiple(array(), array('type' => 'navigation', 'status' => 1));
+  $options = array();
+  foreach ($nodes_navigation as $key => $value) {
+    $options[$key] = $value->title;
+  }
+  $ipbg_mega_menu = variable_get('ipbg_mega_menu', array());
+  $form['ipbg_mega_menu'] = array(
+    '#type' => 'container',
+    '#tree' => TRUE,
+  );
+  //Menus
+  $menus = array(IPBG_MEGAMENU_VI, IPBG_MEGAMENU_EN);
+  foreach ($menus as $key => $value) {
+    $menu = menu_load($value);
+    $menu_items = menu_tree_all_data($value, NULL, 1);
+    $form['ipbg_mega_menu'][$value] = array(
+      '#type' => 'fieldset',
+      '#title' => $menu['title'],
+    );
+    foreach ($menu_items as $key => $item) {
+      $link = $item['link'];
+      $form['ipbg_mega_menu'][$value][$link['mlid']] = array(
+        '#type' => 'select',
+        '#title' => $link['link_title'],
+        '#options' => $options,
+        '#default_value' => isset($ipbg_mega_menu[$value][$link['mlid']]) ? $ipbg_mega_menu[$value][$link['mlid']] : '',
+        '#empty_option' => t('-- None --'),
+      );
+    }
+  }
+  return system_settings_form($form);
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function ipgb_pages_block_info() {
+  $blocks['ipbg_mega_menu'] = array(
+    'info' => t('IPBG Mega Menu'),
+    'cache' => DRUPAL_NO_CACHE
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function ipgb_pages_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'ipbg_mega_menu':
+      $block['subject'] = t('IPBG Mega Menu');
+      $block['content'] = ipbg_mega_menu_block_content();
+      break;
+  }
+  return $block;
+}
+
+function ipbg_mega_menu_block_content() {
+  global $language;
+  $ipbg_mega_menu = variable_get('ipbg_mega_menu', array());
+  //Render menu lv 1 and depth 1
+  $menu_name = IPBG_MEGAMENU_VI;
+  if ($language->language == 'en') {
+    $menu_name = IPBG_MEGAMENU_EN;
+  }
+  $menu_tree_data = menu_tree_page_data($menu_name, 1);
+
+  foreach ($menu_tree_data as $key => $menu_item) {
+    $mlid = $menu_item['link']['mlid'];
+    if (isset($ipbg_mega_menu[$menu_name][$mlid]) && !empty($ipbg_mega_menu[$menu_name][$mlid])) {
+      $menu_tree_data[$key]['link']['mega_menu'] = $ipbg_mega_menu[$menu_name][$mlid];
+    }
+  }
+  $menu_output = menu_tree_output($menu_tree_data);
+  return drupal_render($menu_output);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function ipgb_pages_form_panels_panel_context_edit_content_alter(&$form, &$form_state, $form_id) {
+  $display = &$form_state['display'];
+  $form['display_title']['subtitle'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $display->subtitle,
+    '#title' => t('Sub Title'),
+    '#description' => t('Subtitle'),
+    '#process' => array('ctools_dependent_process'),
+    '#dependency' => array('edit-display-title-hide-title' => array(PANELS_TITLE_FIXED)),
+    '#maxlength' => 255,
+  );
+  $form['#submit'][] = 'ipgb_pages_submit_subpagetitle';
+}
+
+function ipgb_pages_submit_subpagetitle($form, &$form_state) {
+  $display = &$form_state['display'];
+  if (isset($form_state['values']['display_title']['subtitle'])) {
+    //dpm($form_state['values']);
+    $display->subtitle = $form_state['values']['display_title']['subtitle'];
+  }
+}
+
+/**
+ * Implements hook_preprocess_panels_pane().
+ */
+function ipgb_pages_preprocess_panels_pane(&$variables) {
+  if ($variables['pane']->type == 'page_title') {
+    if (isset($variables['display']->subtitle) && !empty($variables['display']->subtitle)) {
+      $variables['content'] .= '<p>' . $variables['display']->subtitle . '</p>';
+      $variables['classes_array'][] = 'pane-page-title-with-subtitle';
+    }
+  }
+}

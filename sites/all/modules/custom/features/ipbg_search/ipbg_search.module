@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the IPBG Search feature.
+ */
+
+include_once 'ipbg_search.features.inc';

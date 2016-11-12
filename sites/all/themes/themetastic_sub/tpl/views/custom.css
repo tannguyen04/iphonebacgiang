@@ -1,0 +1,101 @@
+﻿
+/* -------------------------------------------- */
+/* ThemeTastic Drupal Theme - Custom Styles (Subtheme) */
+/* -------------------------------------------- */
+
+.field-slideshow-pager li {
+	list-style: none;
+}
+.field-slideshow-pager {
+	overflow: hidden;
+	padding: 0;
+	margin: 10px auto;
+	max-width: 450px;
+}
+.group-image .field-name-field-image {
+	clear: both;
+	margin-bottom: 20px;
+}
+.field-name-buy-now {
+	margin-top: 20px;
+}
+.page-node-146 .webform-component--product-buy {
+	visibility: hidden;
+}
+.block-menu.menu-accordion-nojs ul {
+	float: none;
+	margin: 0;
+	list-style: none;
+}
+
+.block-menu.menu-accordion-nojs ul ul {
+	display: none;
+	margin-left: 30px;
+}
+
+.block-menu.menu-accordion-nojs li.expanded:hover > ul,
+.block-menu.menu-accordion-nojs li.expanded.active-trail > ul{
+	display: block;
+}
+.block-menu.menu-accordion-nojs > ul > li {
+	float: left;
+  width: 100%;
+  border-bottom: 1px solid #eee;
+  border-top: 0;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.block-menu.menu-accordion-nojs ul li a {
+  color: #111;
+  font-weight: 300;
+}
+
+.block-menu.menu-accordion-nojs ul li a:hover,
+.block-menu.menu-accordion-nojs ul li a.active {
+	color: #8baa2b;
+}
+
+.block-menu.menu-accordion-nojs ul li.expanded > a:before { 
+	float: left; font-family: 'fontello'; 
+	content: '\e75e'; font-size: 15px; 
+	line-height: 15px; 
+	text-shadow: none;  
+	margin-right: 8px; 
+	margin-left: 1px; 
+	margin-top: 2px; 
+	color: #8BAA2B; 
+	-webkit-transition: 
+	all 0.15s; 
+	-moz-transition: all 0.15s; 
+	-o-transition: all 0.15s; 
+	-ms-transition: all 0.15s; 
+	transition: all 0.15s;
+	width: 10px;
+}
+
+.block-menu.menu-accordion-nojs ul li.expanded > a:hover:before,
+.block-menu.menu-accordion-nojs ul li.expanded.active-trail > a:hover:before { 
+	float: left; font-family: 'fontello'; 
+	content: '\e75c'; font-size: 15px; 
+	line-height: 15px; 
+	text-shadow: none;  
+	margin-right: 8px; 
+	margin-left: 1px; 
+	margin-top: 2px; 
+	color: #8BAA2B; 
+	-webkit-transition: 
+	all 0.15s; 
+	-moz-transition: all 0.15s; 
+	-o-transition: all 0.15s; 
+	-ms-transition: all 0.15s; 
+	transition: all 0.15s;
+}
+
+.mediaholder:hover img {
+	filter: none;
+	-webkit-filter: none;
+}
+.view-id-taxonomy_term_series_and_manuafacture.view-display-id-page .view-content .node {
+	border: none;
+}

@@ -1,0 +1,5 @@
+name = IPBG Token
+description = Custom tokens for site
+version = 7.x - 1.0
+core = 7.x
+dependencies[] = menu_block

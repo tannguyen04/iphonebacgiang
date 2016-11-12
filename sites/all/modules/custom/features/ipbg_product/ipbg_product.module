@@ -1,0 +1,261 @@
+<?php
+/**
+ * Advertise the current views api version
+ */
+function ipbg_product_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'ipbg_product') . '/views',
+  );
+}
+
+function ipbg_product_views_plugins() {
+  return array(
+    'module' => 'ipbg_product',
+    'pager' => array(
+      'ipbg_product' => array(
+        'title' => t('IPBG product pager full'),
+        'help' => t('ipbg_product_pager'),
+        'help topic' => '',
+        'handler' => 'views_plugin_ipbg_product_pager_full',
+        'uses options' => TRUE,
+        'parent' => 'full',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ipbg_product_theme($existing, $type, $theme, $path) {
+  return array(
+    'anchor_link_product_display' => array(
+      'variables' => array('node' => NULL),
+      'template' => 'templates/anchor-link-product-display',
+    ),
+  );
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function ipbg_product_preprocess_anchor_link_product_display(&$variables) {
+  $node = $variables['node'];
+  $features_overview = field_get_items('node', $node, 'field_features_overview');
+  $anchor_links[] = array(
+    'title' => $node->title,
+    'fragment' => '',
+  );
+  if (!empty($features_overview)) {
+    $anchor_links[] = array(
+      'title' => t('Overview'),
+      'fragment' => 'overview',
+    );
+  }
+  //Technical
+  $technical = field_get_items('node', $node, 'field_technical_overview');
+  if (!empty($technical)) {
+    $anchor_links[] = array(
+      'title' => t('Thông số kĩ thuật'),
+      'fragment' => 'technical',
+    );
+  }
+  //Related
+  $product_related = field_get_items('node', $node, 'field_node_related');
+  if (!empty($product_related)) {
+    $anchor_links[] = array(
+      'title' => t('Sản phẩm liên '),
+      'fragment' => 'related',
+    );
+  }
+  $anchor_links[] = array(
+    'title' => t('Top'),
+    'fragment' => 'header',
+  );
+  foreach ($anchor_links as $anchor_link) {
+    $variable_link = array(
+      'text' => $anchor_link['title'],
+      'path' => '',
+      'options' => array(
+        'fragment' => $anchor_link['fragment'],
+        'attributes' => array(),
+        'external' => TRUE,
+      ),
+    );
+    if (!empty($anchor_link['fragment'])){
+      $items[] = theme_link($variable_link);
+    }else {
+      $items[] = $anchor_link['title'];
+    }
+  }
+  $variables['items'] = $items;
+  $variables['title'] = $node->title;
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function ipbg_product_field_formatter_info() {
+  return array(
+    'owlcarousel_formatter_product' => array(
+      'label' => t('Owl Carousel product'),
+      'field types' => array('image', 'text', 'text_long', 'text_with_summary'),
+      'settings'  => array(
+        'settings_group' => 'owlcarousel_settings_default',
+        'image_style' => 'large',
+        'trim_length' => '',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function ipbg_product_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $element = array();
+
+  if ($field['type'] == 'image') {
+    $element['settings_group'] = array(
+      '#type' => 'select',
+      '#title' => t('Settings Group'),
+      '#description' => t('Select the settings group to apply.'),
+      '#default_value' => $settings['settings_group'],
+      '#options' => owlcarousel_instance_callback_list(),
+    );
+    $element['image_style'] = array(
+      '#type' => 'select',
+      '#title' => t('Image Style'),
+      '#description' => t('Apply image style.'),
+      '#default_value' => $settings['image_style'],
+      '#options' => image_style_options(),
+    );
+  }
+
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function ipbg_product_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  $message = '@settings applied to carousel instance.';
+
+  if ($field['type'] == 'image') {
+    $message = '@settings with image style @style applied to carousel instance.';
+    $summary = t($message, array(
+      '@settings' => $settings['settings_group'],
+      '@style' => $settings['image_style'],
+    ));
+    return $summary;
+  }
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function ipbg_product_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+  $settings = $display['settings'];
+
+  // Format carousel settings.
+  $items_group = FALSE;
+  $settings_group = array(
+    'instance' => $settings['settings_group'],
+    'id' => 'owlcarousel-fields-' . $instance['id'],
+  );
+
+  if ($field['type'] == 'image') {
+    $colorbox = FALSE;
+    if (module_exists('owlcarousel_colorbox')) {
+      $colorbox = _owlcarousel_colorbox_settings($settings['settings_group']);
+    }
+
+    foreach ($items as $item) {
+      $vars = array(
+        'path' => $item['uri'],
+        'width' => isset($item['width']) ? $item['width'] : '',
+        'height' => isset($item['height']) ? $item['height'] : '',
+        'alt' => $item['alt'],
+        'title' => $item['title'],
+      );
+
+      if ($colorbox && $colorbox['colorbox']) {
+        $vars += array('style_name' => $settings['image_style']);
+        if ($style_name = $colorbox['colorbox_imagestyle']) {
+          $path = image_style_url($style_name, $item['uri']);
+        }
+        else {
+          $path = file_create_url($item['uri']);
+        }
+
+        $items_group[]['row'] = theme('colorbox_imagefield', array(
+          'image' => $vars,
+          'path' => $path,
+          'title' => $item['title'],
+          'gid' => $settings['settings_group']
+        ));
+      }
+      else {
+        if (empty($settings['image_style'])) {
+          $items_group[]['row'] = theme('image', $vars);
+        }
+        else {
+          $vars += array('style_name' => $settings['image_style']);
+          $items_group[]['row'] = theme('image_style', $vars);
+        }
+      }
+    }
+
+    if ($items_group) {
+      $element[] = array(
+        'avatar' => array(
+          '#theme' => 'image_style',
+          '#style_name' => 'product',
+          '#path' => $items[0]['uri'],
+          '#width' => isset($items[0]['width']) ? $items[0]['width'] : '',
+          '#height' => isset($items[0]['height']) ? $items[0]['height'] : '',
+          '#alt' => $items[0]['alt'],
+          '#title' => $items[0]['title'],
+        ),
+        'view_owlcarousel' => array(
+          '#markup' => '<a class="show-slide" href="#">'.t('View Gallery').'</a>'
+        ),
+        'owlcarousel' => array(
+          '#theme' => 'owlcarousel',
+          '#items' => $items_group,
+          '#settings' => $settings_group,
+          '#prefix' => '<div class="wrap-owlcarousel modal fade" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          
+        </div><div class="modal-body">',
+          '#suffix' => '</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div></div>',
+        ),
+      );
+    }
+    return $element;
+  }
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function ipbg_product_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'ctools' && !empty($plugin)) {
+    return "plugins/$plugin";
+  }
+}
+
+
+

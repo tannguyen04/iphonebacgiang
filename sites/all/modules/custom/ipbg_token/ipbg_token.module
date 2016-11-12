@@ -1,0 +1,76 @@
+<?php
+
+/**
+ * Implements hook_token_info().
+ */
+function ipbg_token_token_info() {
+  $type = array(
+    'name' => t('IPBG'),
+    'description' => t('IPBG Token'),
+  );
+  $ipbg_token['menu-tree'] = array(
+    'name' => 'Build menu tree',
+    'description' => t('Render menu tree: menu-tree:?:parent_mlid:?:level:?:follow:?:depth:?:depth_relative:?:expanded:?'),
+  );
+  return array(
+    'types' => array('ipbg' => $type),
+    'tokens' => array('ipbg' => $ipbg_token),
+  );
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function ipbg_token_tokens($type, $tokens, $data = array(), $options = array()) {
+  $replacements = array();
+  $sanitize = !empty($options['sanitize']);
+  if ($type == 'ipbg') {
+    //Render link menu item specific mlid
+    $results = token_find_with_prefix($tokens, 'menu-mlid');
+    foreach ($results as $key => $value) {
+      $parts = explode(':', $value);
+      if (isset($parts[1])) {
+        $mild = $parts[1];
+        $menu_item = menu_link_load($parts[1]);
+        if (!empty($menu_item)) {
+          $replacements[$value] = l($menu_item['title'], $menu_item['href'], $menu_item[' localized_options']);
+        }
+      }
+    }
+    //Menu tree
+    $results = token_find_with_prefix($tokens, 'menu-tree');
+    $menu_block_default_config = menu_block_default_config();
+    //Get config menu tree by token
+    foreach ($results as $key => $value) {
+      $parts = explode(':', 'menu-tree:' . $key);
+      $settings = array_chunk($parts, 2);
+      foreach ($settings as $setting) {
+        $name_setting = $setting[0];
+        $value_setting = $setting[1];
+        $config_override[$name_setting] = $value_setting;
+      }
+      $menu_name = $config_override['menu-tree'];
+      $parent_mlid = isset($config_override['parent_mlid']) ? $config_override['parent_mlid'] : 0;
+      $config_override['menu_name'] = $menu_name;
+      $config_override['parent_mlid'] = $parent_mlid;
+      $config_override['parent'] = $menu_name . ':' . $parent_mlid;
+      $config_override['delta'] = NULL;
+      $config_override['title_link'] = 1;
+      //Build menu tree
+      $menu_block_config = array_merge($menu_block_default_config, $config_override);
+      try {
+        $menu_output = menu_tree_build($menu_block_config);
+        unset($menu_output['subject']);
+        if (!empty($menu_output['subject_array'])) {
+          $menu_output['subject_array']['#prefix'] = '<h5>';
+          $menu_output['subject_array']['#suffix'] = '</h5>';
+        }
+        $replacements[$value] = render($menu_output);
+      }catch (Exception $e) {
+        drupal_set_message($e->getMessage(), 'error');
+      }
+    }
+
+  }
+  return $replacements;
+}
